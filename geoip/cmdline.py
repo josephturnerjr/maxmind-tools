@@ -1,5 +1,5 @@
 from geo.maxmind import create_geoip_lookup
-from geo import location_to_json, ip_to_int
+from geo import ipv4_to_int, valid_ipv4
 import os
 import json
 import time
@@ -7,7 +7,7 @@ from random import randint
 from itertools import product
 
 def lookup_ip(addr, lookup):
-    ip = ip_to_int(addr)
+    ip = ipv4_to_int(addr)
     location = lookup.lookup(ip)
     if location:
         return json.dumps(location.as_dict())
@@ -25,7 +25,11 @@ if __name__ == "__main__":
     a = time.time()
     while True:
         addr = raw_input("ip: ")
-        print lookup_ip(addr, lookup)
+        if valid_ipv4(addr):
+            print lookup_ip(addr, lookup)
+        else:
+            print "Invalid IP!"
+        
 
     #for addr_parts in product(range(256), repeat=4):
     #    addr = ".".join(map(str, addr_parts))

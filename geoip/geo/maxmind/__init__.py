@@ -1,5 +1,5 @@
 import csv 
-from geo import ip_to_int, GeoIPLookup, IPRangeLocation, IPRangeLocations, Locations
+from geo import ipv4_to_int, GeoIPLookup, IPRangeLocation, IPRangeLocations, Locations
     
 def create_geoip_lookup(locs_filename, blocks_filename):
     return GeoIPLookup(parse_locations(locs_filename),
@@ -38,7 +38,7 @@ def line_to_iprangeloc(line):
 
 def parse_network(network):
     mask, bitrange = network.split("/")
-    return get_range(ip_to_int(mask), int(bitrange))
+    return get_range(ipv4_to_int(mask), int(bitrange))
 
 def get_range(mask, bitrange):
     return (mask, mask + (0xffffffff >> bitrange))

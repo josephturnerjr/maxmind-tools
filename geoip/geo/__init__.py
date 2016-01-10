@@ -1,11 +1,17 @@
 import copy 
+import re
 
 
-def int_to_ip(i):
+valid_ipv4_regex = re.compile(r"^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$")
+
+def valid_ipv4(addr):
+    return bool(valid_ipv4_regex.match(addr))
+
+def int_to_ipv4(i):
     return ".".join(["%i" % ((i & (0xff000000 >> x)) >> (24 - x)) for x in range(0, 32, 8)])
 
 
-def ip_to_int(mask):
+def ipv4_to_int(mask):
     return reduce(lambda total, byte: (total << 8) + byte,
                   map(int, mask.split(".")), 0)
 
@@ -56,7 +62,7 @@ class IPRangeLocation(object):
             self.lat = float(lat)
             self.lon = float(lon)
         except:
-            self.lat = self.lon = 0.0
+            self.lat = self.lon = None
         self.actual_geo_id = self.geo_id or self.reg_cnt_geo_id or None
 
     def geo_id(self):
@@ -64,6 +70,12 @@ class IPRangeLocation(object):
 
     def in_range(self, ip):
         return self.start <= ip <= self.end
+
+    def as_dict(self):
+        if self.lat and self.lon:
+            return dict(latitude=self.lat, longitude=self.lon)
+        else:
+            return {}
 
 
 class Locations(object):
@@ -96,12 +108,13 @@ class Location(AsDictMixin):
 class SpecificLocation(object):
     def __init__(self, location, ip_location):
         self.location = location
-        self.lat = ip_location.lat
-        self.lon = ip_location.lon
+        self.ip_location = ip_location
 
     def as_dict(self):
+        seed = {}
+        ext = {}
+        if self.ip_location:
+            seed = self.ip_location.as_dict()
         if self.location:
             ext = self.location.as_dict()
-        else:
-            ext = {}
-        return dict(latitude=self.lat, longitude=self.lon, **ext)
+        return dict(seed, **ext)
