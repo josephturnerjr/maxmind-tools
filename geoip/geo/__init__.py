@@ -1,0 +1,107 @@
+import copy 
+
+
+def int_to_ip(i):
+    return ".".join(["%i" % ((i & (0xff000000 >> x)) >> (24 - x)) for x in range(0, 32, 8)])
+
+
+def ip_to_int(mask):
+    return reduce(lambda total, byte: (total << 8) + byte,
+                  map(int, mask.split(".")), 0)
+
+
+class GeoIPLookup(object):
+    def __init__(self, locations, location_ranges):
+        self.locations = locations
+        self.location_ranges = location_ranges
+
+    def lookup(self, ip):
+        range = self.location_ranges.find_ip_range(ip)
+        if range:
+            location = self.locations.get_location(range.actual_geo_id)
+            return SpecificLocation(location, range)
+
+
+class AsDictMixin(object):
+    def as_dict(self):
+        return copy.deepcopy(self.__dict__)
+
+
+class IPRangeLocations(object):
+    def __init__(self, ranges):
+        self.ranges = ranges
+
+    def find_ip_range(self, search_ip):
+        lo = 0
+        hi = len(self.ranges)
+        while lo < hi:
+            mid = (lo + hi) // 2
+            if self.ranges[mid].in_range(search_ip):
+                return self.ranges[mid]
+            elif self.ranges[mid].start < search_ip:
+                lo = mid + 1
+            else:
+                hi = mid
+        
+
+class IPRangeLocation(object):
+    def __init__(self, rng, geo_id, reg_cnt_geo_id, rep_cnt_geo_id, is_anon, is_sat, lat, lon):
+        self.start, self.end = rng
+        self.geo_id = geo_id
+        self.reg_cnt_geo_id = reg_cnt_geo_id
+        self.rep_cnt_geo_id = rep_cnt_geo_id
+        self.anon = bool(is_anon)
+        self.is_sat = bool(is_sat)
+        try:
+            self.lat = float(lat)
+            self.lon = float(lon)
+        except:
+            self.lat = self.lon = 0.0
+        self.actual_geo_id = self.geo_id or self.reg_cnt_geo_id or None
+
+    def geo_id(self):
+        return self.actual_geo_id
+
+    def in_range(self, ip):
+        return self.start <= ip <= self.end
+
+
+class Locations(object):
+    def __init__(self):
+        self.locations = {}
+
+    def register_location(self, geo_id, continent_code, continent_name, country_code, country_name, r1_code, r1_name, r2_code, r2_name, city):
+        location = Location(continent_code, continent_name, country_code, country_name, r1_code, r1_name, r2_code, r2_name, city)
+        self.locations[geo_id] = location
+
+    def get_location(self, location_id):
+        return self.locations.get(location_id)
+
+    def __repr__(self):
+        return "Locations<%s registered>" % len(self.locations)
+
+
+class Location(AsDictMixin):
+    def __init__(self, continent_code, continent_name, country_code, country_name, r1_code, r1_name, r2_code, r2_name, city):
+        self.continent = (continent_code, continent_name)
+        self.country = (country_code, country_name)
+        self.r1 = (r1_code, r1_name)
+        self.r2 = (r2_code, r2_name)
+        self.city = city
+
+    def __repr__(self):
+        return "Location <%s > %s > %s > %s > %s>" % (self.continent[1], self.country[0], self.r1[0], self.r2[0], self.city)
+
+
+class SpecificLocation(object):
+    def __init__(self, location, ip_location):
+        self.location = location
+        self.lat = ip_location.lat
+        self.lon = ip_location.lon
+
+    def as_dict(self):
+        if self.location:
+            ext = self.location.as_dict()
+        else:
+            ext = {}
+        return dict(latitude=self.lat, longitude=self.lon, **ext)
