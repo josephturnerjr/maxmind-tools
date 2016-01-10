@@ -31,8 +31,8 @@ def line_to_iprangeloc(line):
                            geoname_id,
                            registered_country_geoname_id,
                            represented_country_geoname_id,
-                           int(is_anonymous_proxy),
-                           int(is_satellite_provider),
+                           is_anonymous_proxy,
+                           is_satellite_provider,
                            latitude, longitude)
     
 
