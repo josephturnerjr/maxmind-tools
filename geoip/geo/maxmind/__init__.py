@@ -1,9 +1,28 @@
 import csv 
-from geo import ipv4_to_int, GeoIPLookup, IPRangeLocation, IPRangeLocations, Locations
+from geo import Location, ipv4_to_int, GeoIPLookup, IPRangeLocation, IPRangeLocations
+
+
+class Locations(object):
+    def __init__(self):
+        self.locations = {}
+
+    def register_location(self, geo_id, *args):
+        location = Location(*args)
+        self.locations[geo_id] = location
+
+    def get_location(self, location_id):
+        return self.locations.get(location_id)
+
+    def __repr__(self):
+        return "Locations<%s registered>" % len(self.locations)
+
     
 def create_geoip_lookup(locs_filename, blocks_filename):
-    return GeoIPLookup(parse_locations(locs_filename),
-                       parse_blocks(blocks_filename))
+    locations = parse_locations(locs_filename)
+    iprs = parse_blocks(blocks_filename)
+    for geo_id, ipr in iprs:
+        ipr.location = locations.get_location(geo_id)
+    return GeoIPLookup([x[1] for x in iprs])
 
 def parse_locations(filename):
     locations = Locations()
@@ -21,20 +40,16 @@ def parse_blocks(filename):
     with open(filename) as f:
         reader = csv.reader(f)
         reader.next()
-        return IPRangeLocations(map(line_to_iprangeloc, reader))
+        return map(line_to_iprangeloc, reader)
 
 def line_to_iprangeloc(line):
     network,geoname_id,registered_country_geoname_id,represented_country_geoname_id,is_anonymous_proxy,is_satellite_provider,postal_code,latitude,longitude = line
-    if not geoname_id and not registered_country_geoname_id:
-        print line
-    return IPRangeLocation(parse_network(network),
-                           geoname_id,
-                           registered_country_geoname_id,
-                           represented_country_geoname_id,
-                           is_anonymous_proxy,
-                           is_satellite_provider,
-                           latitude, longitude)
-    
+    actual_id = geoname_id or registered_country_geoname_id or None
+    try:
+        lat, lon = float(latitude), float(longitude)
+    except:
+        lat = lon = None
+    return [actual_id, IPRangeLocation(parse_network(network), lat, lon)]
 
 def parse_network(network):
     mask, bitrange = network.split("/")

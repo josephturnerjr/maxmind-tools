@@ -18,15 +18,11 @@ def ipv4_to_int(mask):
 
 
 class GeoIPLookup(object):
-    def __init__(self, locations, location_ranges):
-        self.locations = locations
-        self.location_ranges = location_ranges
+    def __init__(self, location_ranges):
+        self.ranges = IPRangeLocations(location_ranges)
 
     def lookup(self, ip):
-        range = self.location_ranges.find_ip_range(ip)
-        if range:
-            location = self.locations.get_location(range.actual_geo_id())
-            return SpecificLocation(location, range)
+        return self.ranges.find_ip_range(ip)
 
 
 class IPRangeLocations(object):
@@ -44,47 +40,27 @@ class IPRangeLocations(object):
                 lo = mid + 1
             else:
                 hi = mid
-        
+
 
 class IPRangeLocation(object):
-    __slots__ = ["start", "end", "geo_id", "reg_cnt_geo_id", "lat", "lon"]
+    __slots__ = ["start", "end", "location", "lat", "lon"]
 
-    def __init__(self, rng, geo_id, reg_cnt_geo_id, rep_cnt_geo_id, is_anon, is_sat, lat, lon):
+    def __init__(self, rng, lat, lon):
         self.start, self.end = rng
-        self.geo_id = geo_id
-        self.reg_cnt_geo_id = reg_cnt_geo_id
-        try:
-            self.lat = float(lat)
-            self.lon = float(lon)
-        except:
-            self.lat = self.lon = None
-
-    def actual_geo_id(self):
-        return self.geo_id or self.reg_cnt_geo_id or None
+        self.lat = lat
+        self.lon = lon
+        self.location = None
 
     def in_range(self, ip):
         return self.start <= ip <= self.end
 
     def as_dict(self):
+        seed = {}
         if self.lat and self.lon:
-            return dict(latitude=self.lat, longitude=self.lon)
-        else:
-            return {}
-
-
-class Locations(object):
-    def __init__(self):
-        self.locations = {}
-
-    def register_location(self, geo_id, continent_code, continent_name, country_code, country_name, r1_code, r1_name, r2_code, r2_name, city):
-        location = Location(continent_code, continent_name, country_code, country_name, r1_code, r1_name, r2_code, r2_name, city)
-        self.locations[geo_id] = location
-
-    def get_location(self, location_id):
-        return self.locations.get(location_id)
-
-    def __repr__(self):
-        return "Locations<%s registered>" % len(self.locations)
+            seed = dict(latitude=self.lat, longitude=self.lon)
+        if self.location:
+            ext = self.location.as_dict()
+        return dict(seed, **ext)
 
 
 class Location(object):
@@ -106,18 +82,3 @@ class Location(object):
                 "r1": self.r1,
                 "r2": self.r2,
                 "city": self.city}
-
-
-class SpecificLocation(object):
-    def __init__(self, location, ip_location):
-        self.location = location
-        self.ip_location = ip_location
-
-    def as_dict(self):
-        seed = {}
-        ext = {}
-        if self.ip_location:
-            seed = self.ip_location.as_dict()
-        if self.location:
-            ext = self.location.as_dict()
-        return dict(seed, **ext)
