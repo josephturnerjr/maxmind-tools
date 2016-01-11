@@ -14,26 +14,55 @@ def lookup_ip(addr, lookup):
     else:
         return None
 
-if __name__ == "__main__":
-    directory=".data/GeoLite2-City-CSV_20151103"
-    locs = os.path.join(directory, "GeoLite2-City-Locations-en.csv")
-    blocks = os.path.join(directory, "GeoLite2-City-Blocks-IPv4.csv")
-
-    lookup = create_geoip_lookup(locs, blocks)
-    iters = 0
+def timeit(lookup):
+    iters = 1000000
     errors = 0
     a = time.time()
+    for _ in xrange(iters):
+        addr = ".".join([str(randint(0,255)) for _ in range(4)])
+        ret = lookup_ip(addr, lookup)
+    elapsed = time.time() - a
+    print "%s iterations: %s seconds (%s iterations / sec) with %s errors" % (iters, elapsed, iters / elapsed, errors)
+
+def input(lookup):
     while True:
         addr = raw_input("ip: ")
         if valid_ipv4(addr):
             print lookup_ip(addr, lookup)
         else:
             print "Invalid IP!"
+
+def test_some(lookup):
+    octets = 1
+    tests = 10000
+    iters = 0
+    a = time.time()
+    for addr_parts in product(range(256), repeat=octets):
+        print addr_parts
+        prefix = map(str, addr_parts)
+        for _ in xrange(tests):
+            addr = ".".join(prefix + [str(randint(0,255)) for _ in range(4-octets)])
+            ret = lookup_ip(addr, lookup)
+            iters += 1
+    elapsed = time.time() - a
+    print "%s iterations: %s seconds (%s iterations / sec) with %s errors" % (iters, elapsed, iters / elapsed, errors)
+
+def test_all(lookup):
+    for addr_parts in product(range(256), repeat=4):
+        addr = ".".join(map(str, addr_parts))
+        ret = lookup_ip(addr, lookup)
+        iters += 1
+    elapsed = time.time() - a
+    print "%s iterations: %s seconds (%s iterations / sec) with %s errors" % (iters, elapsed, iters / elapsed, errors)
         
 
-    #for addr_parts in product(range(256), repeat=4):
-    #    addr = ".".join(map(str, addr_parts))
-    #    ret = lookup_ip(addr, lookup)
-    #    iters += 1
-    #elapsed = time.time() - a
-    #print "%s iterations: %s seconds (%s iterations / sec) with %s errors" % (iters, elapsed, iters / elapsed, errors)
+if __name__ == "__main__":
+    directory=".data/GeoLite2-City-CSV_20151103"
+    locs = os.path.join(directory, "GeoLite2-City-Locations-en.csv")
+    blocks = os.path.join(directory, "GeoLite2-City-Blocks-IPv4.csv")
+
+    lookup = create_geoip_lookup(locs, blocks)
+    test_some(lookup)
+    #timeit(lookup)
+    input(lookup)
+

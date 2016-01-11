@@ -56,6 +56,7 @@ class IPRangeLocation(object):
 
     def as_dict(self):
         seed = {}
+        ext = {}
         if self.lat and self.lon:
             seed = dict(latitude=self.lat, longitude=self.lon)
         if self.location:
