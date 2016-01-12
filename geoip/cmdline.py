@@ -14,11 +14,11 @@ def lookup_ipv4(ipv4_addr, lookups):
         result = lookup.lookup(ip)
         if result:
             results.update(result.as_dict())
-    return results
+    return json.dumps(results)
 
 
 def timeit(lookups):
-    iters = 1000000
+    iters = 100000
     errors = 0
     a = time.time()
     for _ in xrange(iters):
@@ -60,14 +60,14 @@ def test_all(lookups):
 
 
 def get_city_lookup():
-    directory=".data/GeoLite2-City-CSV_20151103"
+    directory=".data/GeoCity"
     locs = os.path.join(directory, "GeoLite2-City-Locations-en.csv")
     blocks = os.path.join(directory, "GeoLite2-City-Blocks-IPv4.csv")
     return GeoLookup(locs, blocks)
 
 def get_asn_lookup():
     directory = ".data"
-    asns = os.path.join(directory, "GeoIPASNum2.csv")
+    asns = os.path.join(directory, "GeoASN.csv")
     return ASNLookup(asns) 
 
 if __name__ == "__main__":

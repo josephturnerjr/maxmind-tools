@@ -34,7 +34,7 @@ class ASNLookup(IPRangeLookup):
             return map(self.line_to_asnrange, reader)
 
     def line_to_asnrange(self, line):
-        start, end, asn_owner = line
+        start, end, asn_owner = map(lambda val: val.decode('latin1'), line)
         start = int(start)
         end = int(end)
         match = self.asn_owner_regex.match(asn_owner)

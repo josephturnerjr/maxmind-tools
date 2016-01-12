@@ -19,6 +19,7 @@ class GeoLiteCityLookup(IPRangeLookup):
         return locations
 
     def line_to_location(self, locations, line):
+        line = map(lambda val: val.decode('latin1'), line)
         (geoname_id, _, continent_code, continent_name, country_iso_code,
          country_name, subdivision_1_iso_code, subdivision_1_name,
          subdivision_2_iso_code, subdivision_2_name, city_name, _, _) = line 
@@ -34,6 +35,7 @@ class GeoLiteCityLookup(IPRangeLookup):
             return map(self.line_to_iprangeloc, reader)
 
     def line_to_iprangeloc(self, line):
+        line = map(lambda val: val.decode('latin1'), line)
         network,geoname_id,registered_country_geoname_id,represented_country_geoname_id,is_anonymous_proxy,is_satellite_provider,postal_code,latitude,longitude = line
         actual_id = geoname_id or registered_country_geoname_id or None
         try:
