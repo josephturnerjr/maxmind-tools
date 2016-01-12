@@ -1,5 +1,6 @@
-from geo.maxmind import create_geoip_lookup, create_asn_lookup
-from geo import ipv4_to_int, valid_ipv4
+from maxmind.city import GeoLiteCityLookup as GeoLookup
+from maxmind.asn import ASNLookup
+from maxmind import ipv4_to_int, valid_ipv4
 import os
 import json
 import time
@@ -62,12 +63,12 @@ def get_city_lookup():
     directory=".data/GeoLite2-City-CSV_20151103"
     locs = os.path.join(directory, "GeoLite2-City-Locations-en.csv")
     blocks = os.path.join(directory, "GeoLite2-City-Blocks-IPv4.csv")
-    return create_geoip_lookup(locs, blocks)
+    return GeoLookup(locs, blocks)
 
 def get_asn_lookup():
     directory = ".data"
     asns = os.path.join(directory, "GeoIPASNum2.csv")
-    return create_asn_lookup(asns) 
+    return ASNLookup(asns) 
 
 if __name__ == "__main__":
     asn_lookup = get_asn_lookup()
