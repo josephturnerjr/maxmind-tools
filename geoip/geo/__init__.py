@@ -4,6 +4,7 @@ import re
 
 valid_ipv4_regex = re.compile(r"^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$")
 
+
 def valid_ipv4(addr):
     return bool(valid_ipv4_regex.match(addr))
 
@@ -17,19 +18,11 @@ def ipv4_to_int(mask):
                   map(int, mask.split(".")), 0)
 
 
-class GeoIPLookup(object):
-    def __init__(self, location_ranges):
-        self.ranges = IPRangeLocations(location_ranges)
-
-    def lookup(self, ip):
-        return self.ranges.find_ip_range(ip)
-
-
-class IPRangeLocations(object):
+class IPRangeLookup(object):
     def __init__(self, ranges):
         self.ranges = ranges
 
-    def find_ip_range(self, search_ip):
+    def lookup(self, search_ip):
         lo = 0
         hi = len(self.ranges)
         while lo < hi:
@@ -41,18 +34,43 @@ class IPRangeLocations(object):
             else:
                 hi = mid
 
+class IPRange(object):
+    __slots__ = ["start", "end"]
 
-class IPRangeLocation(object):
-    __slots__ = ["start", "end", "location", "lat", "lon"]
-
-    def __init__(self, rng, lat, lon):
-        self.start, self.end = rng
-        self.lat = lat
-        self.lon = lon
-        self.location = None
+    def __init__(self, start, end):
+        self.start = start
+        self.end = end
 
     def in_range(self, ip):
         return self.start <= ip <= self.end
+
+
+class IPRangeASN(IPRange):
+    __slots__ = ["owner", "asn"]
+
+    def __init__(self, start, end, owner, asn):
+        super(IPRangeASN, self).__init__(start, end)
+        self.owner = owner
+        self.asn = asn
+
+    def as_dict(self):
+        base = {"subnet": [int_to_ipv4(self.start), int_to_ipv4(self.end)]}
+        if self.asn:
+            base["asn"] = self.asn
+        if self.owner:
+            base["owner"] = self.owner
+        return base
+        
+
+
+class IPRangeLocation(IPRange):
+    __slots__ = ["location", "lat", "lon"]
+
+    def __init__(self, rng, lat, lon):
+        super(IPRangeLocation, self).__init__(*rng)
+        self.lat = lat
+        self.lon = lon
+        self.location = None
 
     def as_dict(self):
         seed = {}

@@ -1,5 +1,6 @@
 import csv 
-from geo import Location, ipv4_to_int, GeoIPLookup, IPRangeLocation, IPRangeLocations
+from geo import Location, ipv4_to_int, IPRangeLookup, IPRangeLocation, IPRangeASN
+import re
 
 
 class Locations(object):
@@ -16,13 +17,36 @@ class Locations(object):
     def __repr__(self):
         return "Locations<%s registered>" % len(self.locations)
 
+def create_asn_lookup(asn_filename):
+    asns = parse_asns(asn_filename)
+    return IPRangeLookup(asns)
     
 def create_geoip_lookup(locs_filename, blocks_filename):
     locations = parse_locations(locs_filename)
     iprs = parse_blocks(blocks_filename)
     for geo_id, ipr in iprs:
         ipr.location = locations.get_location(geo_id)
-    return GeoIPLookup([x[1] for x in iprs])
+    return IPRangeLookup([x[1] for x in iprs])
+
+def parse_asns(filename):
+    with open(filename) as f:
+        reader = csv.reader(f)
+        reader.next()
+        return map(line_to_asnrange, reader)
+
+asn_owner_regex = re.compile("(?P<asn>AS[0-9]*) ?(?P<owner>.*)")
+
+def line_to_asnrange(line):
+    start, end, asn_owner = line
+    start = int(start)
+    end = int(end)
+    match = asn_owner_regex.match(asn_owner)
+    asn, owner = match.groups()
+    if not owner:
+        owner = None
+    return IPRangeASN(start, end, owner, asn)
+
+        
 
 def parse_locations(filename):
     locations = Locations()
