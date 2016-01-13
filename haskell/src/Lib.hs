@@ -12,7 +12,7 @@ import Network.Wai.Handler.Warp
 import Servant
 import Control.Monad.Trans.Either
 import Data.Char
-import Types
+import Data.IP
 import qualified Data.Text as T
 
 
