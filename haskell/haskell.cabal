@@ -15,7 +15,7 @@ cabal-version:       >=1.10
 
 library
   hs-source-dirs:      src
-  exposed-modules:     Lib, Data.IP
+  exposed-modules:     Lib, Data.IP, Data.Csv, Data.MaxMind
   build-depends:       base >= 4.7 && < 5
                      , aeson
                      , servant-server
@@ -24,6 +24,8 @@ library
                      , either
                      , parsec
                      , text
+                     , containers
+                     , mtl
   default-language:    Haskell2010
 
 executable haskell-exe

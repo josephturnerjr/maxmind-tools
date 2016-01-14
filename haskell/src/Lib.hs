@@ -11,63 +11,42 @@ import Network.Wai
 import Network.Wai.Handler.Warp
 import Servant
 import Control.Monad.Trans.Either
-import Data.Char
 import Data.IP
 import qualified Data.Text as T
-
-
-data Location = Location 
-  {
-    continent :: Continent,
-    country :: Country,
-    r1 :: Region,
-    r2 :: Region,
-    city :: City 
-  } deriving (Show)
-
-type Continent = Maybe (String, String)
-type Country = Maybe (String, String)
-type Region = Maybe (String, String)
-type City = Maybe String
-
-data ASN = ASN
-  {
-    netOwner :: NetOwner,
-    netAsn :: NetASN
-  } deriving (Show)
-
-type NetOwner = Maybe String
-type NetASN = Maybe String
-data IPDetails = IPDetails
-  {
-    location :: Location,
-    asn :: ASN
-  } deriving (Show)
-
-data IPv4RangeLookup a = IPv4RangeLookup Int Int a
+import Data.MaxMind
+import Control.Monad.Reader (ReaderT, runReaderT, asks)
 
 instance FromText IPv4 where
   fromText = parseIPv4 . T.unpack
 
-$(deriveJSON defaultOptions{omitNothingFields = True} ''Location)
-$(deriveJSON defaultOptions{omitNothingFields = True, fieldLabelModifier = (map toLower) . (drop 3)} ''ASN)
-$(deriveJSON defaultOptions{omitNothingFields = True} ''IPDetails)
 
-details :: IPv4 -> IPDetails
-details _ = IPDetails (Location (Just ("NA", "North America")) (Just ("US", "United States")) (Just ("SC", "South Carolina")) Nothing (Just "Greenville")) (ASN (Just "Google, Inc.") (Just "AS01234"))
+type AppM = ReaderT Config (EitherT ServantErr IO)
 
 type API = Capture "ip" IPv4 :> Get '[JSON] IPDetails
 
-startApp :: IO ()
-startApp = run 8080 app
+data Config = Config {
+  search :: IPv4 -> IPDetails
+}
 
-app :: Application
-app = serve api server
+startApp :: IO ()
+startApp = do
+  ipSearch <- maxMindIPSearch
+  let config = Config {search = ipSearch}
+  run 8080 $ app config
+
+app :: Config -> Application
+app config = serve api (readerServer config)
 
 api :: Proxy API
 api = Proxy
 
-server :: Server API
-server = deets
-  where deets :: IPv4 -> EitherT ServantErr IO IPDetails
-        deets ipv4 = return $ details ipv4
+readerServer :: Config -> Server API
+readerServer config = enter (readerToEither config) server
+
+readerToEither :: Config -> AppM :~> EitherT ServantErr IO
+readerToEither cfg = Nat $ \x -> runReaderT x cfg
+
+server :: ServerT API AppM
+server = lookupIP where
+  lookupIP :: IPv4 -> AppM IPDetails
+  lookupIP ip = asks (\s -> search s ip)

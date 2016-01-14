@@ -1,17 +1,23 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Data.IP
   (
-    IPv4, IPv4Range, parseIPv4, parseCIDR
+    IPv4(..), IPv4Range(..), parseIPv4, parseCIDR
   ) where
 
 import Text.ParserCombinators.Parsec
 import Control.Applicative ((<*>), (<*), (*>), (<$>))
 import Text.Read
+import Text.Show
 import Data.Word
 import Data.Bits
+import Data.List (intercalate)
 
-newtype IPv4 = IPv4 Word32 deriving (Show)
+newtype IPv4 = IPv4 Word32
 data IPv4Range = IPv4Range IPv4 IPv4 deriving (Show)
+
+instance Show IPv4 where
+  show (IPv4 ip) = intercalate "." (map (show . (mask ip)) [24, 16, 8, 0]) where
+    mask ip b = ((ip .&. (0xff `shift` b)) `shift` (-b))
 
 ipv4 :: String -> String -> String -> String -> Maybe IPv4
 ipv4 o1 o2 o3 o4 = do
