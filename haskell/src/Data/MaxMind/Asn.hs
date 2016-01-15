@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TemplateHaskell #-}
 module Data.MaxMind.Asn
-  (ASN, asnLookup) where
+  (ASN, parseASNField, asnLookup) where
 
 import Data.IP (IPv4RangeSegment(..), IPv4Range(..), IPv4(..))
 import Data.Word
@@ -11,6 +11,8 @@ import Data.Csv (readCSVFile)
 import Data.Maybe
 import Text.Read
 import Data.Char
+import Text.ParserCombinators.Parsec
+import Control.Applicative ((<*>), (<*), (*>), (<$>))
 
 type ASNLookup = [ASN]
 type ASN = IPv4RangeSegment ASNDetails
@@ -37,7 +39,16 @@ parseASNFields [startF, endF, asnF] = do
   asn <- parseASNField asnF
   return $ IPv4RangeSegment (IPv4Range (IPv4 start) (IPv4 end)) asn
 
+
 parseASNField :: String -> Maybe ASNDetails
-parseASNField _ = Just $ ASNDetails (Just "foo") (Just "bar")
+parseASNField s = case parse parseASNField' "ASN Parser" s of
+                     (Right b) -> Just b
+                     (Left err) -> Nothing
+
+parseASNField' = ASNDetails <$> optionMaybe asn <*> (try spaces *> optionMaybe owner) <* eof
+
+asn = (++) <$> string "AS" <*> many digit
+
+owner = manyTill anyChar eof
 
 $(deriveJSON defaultOptions{omitNothingFields = True, fieldLabelModifier = (map toLower) . (drop 3)} ''ASNDetails)

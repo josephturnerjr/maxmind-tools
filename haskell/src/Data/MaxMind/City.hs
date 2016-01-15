@@ -51,7 +51,8 @@ parseCityFields [network, geoname_id, registered_country_geoname_id,
   return (undefined, undefined)
 
 cityLookup :: FilePath -> FilePath -> IO CityLookup
-cityLookup blockF locF = do
+cityLookup blockF locF = return []
+cityLookup' blockF locF = do
   -- yolo on partial
   (Just locFieldLines) <- (readCSVFile locF)
   (Just blockFieldLines) <- (readCSVFile blockF)

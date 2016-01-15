@@ -31,7 +31,9 @@ data SegmentOrdering = LowerThan | Within | HigherThan
 
 $(deriveJSON defaultOptions ''IPv4)
 $(deriveJSON defaultOptions ''IPv4Range)
-$(deriveJSON defaultOptions ''IPv4RangeSegment)
+
+instance ToJSON a => ToJSON (IPv4RangeSegment a) where
+  toJSON (IPv4RangeSegment (IPv4Range start end) a) = object ["subnet" .= (object ["start" .= start, "end" .= end]), "details" .= a]
 
 cmpRange :: IPv4Range -> IPv4 -> SegmentOrdering
 cmpRange (IPv4Range start end) ip
