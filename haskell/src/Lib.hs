@@ -1,3 +1,4 @@
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE DataKinds       #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeOperators   #-}
@@ -19,13 +20,12 @@ import Control.Monad.Reader (ReaderT, runReaderT, asks)
 instance FromText IPv4 where
   fromText = parseIPv4 . T.unpack
 
-
 type AppM = ReaderT Config (EitherT ServantErr IO)
 
 type API = Capture "ip" IPv4 :> Get '[JSON] IPDetails
 
 data Config = Config {
-  search :: IPv4 -> IPDetails
+  search :: MaxMindIPSearch
 }
 
 startApp :: IO ()
@@ -47,6 +47,6 @@ readerToEither :: Config -> AppM :~> EitherT ServantErr IO
 readerToEither cfg = Nat $ \x -> runReaderT x cfg
 
 server :: ServerT API AppM
-server = lookupIP where
-  lookupIP :: IPv4 -> AppM IPDetails
-  lookupIP ip = asks (\s -> search s ip)
+server = lookup where
+  lookup :: IPv4 -> AppM IPDetails
+  lookup ip = asks (\s -> lookupIP (search s) ip)
