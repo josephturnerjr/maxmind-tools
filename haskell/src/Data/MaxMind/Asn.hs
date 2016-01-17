@@ -31,7 +31,7 @@ asnLookup :: FilePath -> IO ASNLookup
 asnLookup f = do
   -- yolo on partial
   (Just fieldLines) <- (readCSVFile f)
-  return $ mapMaybe parseASNFields fieldLines
+  return $! mapMaybe parseASNFields fieldLines
 
 parseASNFields :: [String] -> Maybe ASN
 parseASNFields [startF, endF, asnF] = do
@@ -42,7 +42,7 @@ parseASNFields [startF, endF, asnF] = do
 
 parseASNField :: String -> Maybe ASNDetails
 parseASNField s = case parse parseASNField' "ASN Parser" s of
-                     (Right b) -> Just b
+                     (Right b) -> Just $! b
                      (Left err) -> Nothing
 
 parseASNField' = makeDetails <$> optionMaybe asn <*> (try spaces *> optionMaybe owner) <* eof

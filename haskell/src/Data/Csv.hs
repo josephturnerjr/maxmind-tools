@@ -10,7 +10,7 @@ data HandleHeader = DiscardHeader | KeepHeader
 
 parseCSV :: String -> Maybe [[String]]
 parseCSV s = case parse parseLines "CSV Parser" s of
-                     (Right b) -> Just b
+                     (Right b) -> Just $! b
                      (Left err) -> Nothing
 
 parseLines = parseLine `endBy` (char '\n') <* eof

@@ -17,7 +17,7 @@ import Data.Aeson.TH
 
 data MaxMindIPSearch = MaxMindIPSearch
   {
-    lookupIP :: IPv4 -> IPDetails
+    lookupIP :: !(IPv4 -> IPDetails)
   }
 
 data IPDetails = IPDetails
