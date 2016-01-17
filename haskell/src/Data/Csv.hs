@@ -5,17 +5,19 @@ module Data.Csv
 
 import Text.ParserCombinators.Parsec
 import System.IO
+import Data.Maybe
 
 data HandleHeader = DiscardHeader | KeepHeader
 
-parseCSV :: String -> Maybe [[String]]
-parseCSV s = case parse parseLines "CSV Parser" s of
+parseCSV :: String -> [[String]]
+parseCSV = (mapMaybe parseCSVLine) . lines
+
+parseCSVLine :: String -> Maybe [String]
+parseCSVLine s = case parse parseLine "CSV Parser" s of
                      (Right b) -> Just $! b
                      (Left err) -> Nothing
 
-parseLines = parseLine `endBy` (char '\n') <* eof
-
-parseLine = chainl field comma []
+parseLine = chainl field comma [] <* eof
 
 comma = char ',' >> (return $! (++))
 
@@ -34,6 +36,6 @@ readCSVFile path = do
 
 parseCSVFile :: HandleHeader -> String -> Maybe [[String]]
 parseCSVFile DiscardHeader ls = do
-  (headers:fieldLines) <- parseCSV ls
+  let (headers:fieldLines) = parseCSV ls
   return $! fieldLines
-parseCSVFile KeepHeader ls = parseCSV ls
+parseCSVFile KeepHeader ls = Just $! parseCSV ls
