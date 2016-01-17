@@ -13,18 +13,19 @@ import Text.Read
 import Data.Char
 import Text.ParserCombinators.Parsec
 import Control.Applicative ((<*>), (<*), (*>), (<$>))
+import qualified Data.Text as T
 
 type ASNLookup = [ASN]
 type ASN = IPv4RangeSegment ASNDetails
 
 data ASNDetails = ASNDetails
   {
-    netOwner :: NetOwner,
-    netAsn :: NetASN
+    netOwner :: !NetOwner,
+    netAsn :: !NetASN
   } deriving (Show)
 
-type NetOwner = Maybe String
-type NetASN = Maybe String
+type NetOwner = T.Text
+type NetASN = T.Text
 
 asnLookup :: FilePath -> IO ASNLookup
 asnLookup f = do
@@ -37,15 +38,16 @@ parseASNFields [startF, endF, asnF] = do
   start <- readMaybe startF :: Maybe Word32
   end <- readMaybe endF :: Maybe Word32
   asn <- parseASNField asnF
-  return $ IPv4RangeSegment (IPv4Range (IPv4 start) (IPv4 end)) asn
-
+  return $! IPv4RangeSegment (IPv4Range (IPv4 start) (IPv4 end)) asn
 
 parseASNField :: String -> Maybe ASNDetails
 parseASNField s = case parse parseASNField' "ASN Parser" s of
                      (Right b) -> Just b
                      (Left err) -> Nothing
 
-parseASNField' = ASNDetails <$> optionMaybe asn <*> (try spaces *> optionMaybe owner) <* eof
+parseASNField' = makeDetails <$> optionMaybe asn <*> (try spaces *> optionMaybe owner) <* eof
+  where makeDetails asn owner = ASNDetails (fillEmpty asn) (fillEmpty owner)
+        fillEmpty = maybe "" T.pack
 
 asn = (++) <$> string "AS" <*> many digit
 

@@ -25,7 +25,7 @@ type AppM = ReaderT Config (EitherT ServantErr IO)
 type API = Capture "ip" IPv4 :> Get '[JSON] IPDetails
 
 data Config = Config {
-  search :: MaxMindIPSearch
+  search :: !MaxMindIPSearch
 }
 
 startApp :: IO ()
