@@ -19,7 +19,7 @@ parseCSVLine s = case parse parseLine "CSV Parser" s of
 
 parseLine = chainl field comma [] <* eof
 
-comma = char ',' >> (return $! (++))
+comma = char ',' >> (return $ (++))
 
 field = (:[]) <$> ((try quotedField) <|> unquotedField)
 unquotedField = many (noneOf ",\n")
@@ -27,15 +27,14 @@ quotedField = char '"' *> (many (try escapedQuote <|> noneOf "\"")) <* char '"'
 
 escapedQuote = char '"' *> char '"'
 
-readCSVFile :: FilePath -> IO (Maybe [[String]])
+readCSVFile :: FilePath -> IO [[String]]
 readCSVFile path = do
   h <- openFile path ReadMode 
   hSetEncoding h latin1
   lines <- hGetContents h
   return $! parseCSVFile DiscardHeader lines
 
-parseCSVFile :: HandleHeader -> String -> Maybe [[String]]
-parseCSVFile DiscardHeader ls = do
-  let (headers:fieldLines) = parseCSV ls
-  return $! fieldLines
-parseCSVFile KeepHeader ls = Just $! parseCSV ls
+parseCSVFile :: HandleHeader -> String -> [[String]]
+parseCSVFile DiscardHeader ls = fieldLines where
+  (headers:fieldLines) = parseCSV ls
+parseCSVFile KeepHeader ls = parseCSV ls

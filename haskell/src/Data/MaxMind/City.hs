@@ -19,9 +19,9 @@ type LocationRange = IPv4RangeSegment Location
 
 data Location = Location
   {
-    details :: !LocationDetails,
-    latitude :: !Latitude,
-    longitude :: !Longitude
+    details :: {-# UNPACK #-} !LocationDetails,
+    latitude :: {-# UNPACK #-} !Latitude,
+    longitude :: {-# UNPACK #-} !Longitude
   } deriving (Show)
 
 type Latitude = Double
@@ -29,28 +29,28 @@ type Longitude = Double
 
 data LocationDetails = LocationDetails
   {
-    continent :: !Continent,
-    country :: !Country,
-    r1 :: !Region,
-    r2 :: !Region,
-    city :: !City 
+    continent :: {-# UNPACK #-} !Continent,
+    country :: {-# UNPACK #-} !Country,
+    r1 :: {-# UNPACK #-} !Region,
+    r2 :: {-# UNPACK #-} !Region,
+    city :: {-# UNPACK #-} !City 
   } deriving (Show)
 
-data CodedName = CodedName T.Text T.Text deriving (Show)
+data CodedName = CodedName {-# UNPACK #-} !T.Text {-# UNPACK #-} !T.Text deriving (Show)
 type Continent = CodedName
 type Country = CodedName
 type Region = CodedName
 type City = T.Text
 
-$(deriveJSON defaultOptions{omitNothingFields = True} ''CodedName)
-$(deriveJSON defaultOptions{omitNothingFields = True} ''LocationDetails)
-$(deriveJSON defaultOptions{omitNothingFields = True} ''Location)
+$(deriveJSON defaultOptions ''CodedName)
+$(deriveJSON defaultOptions ''LocationDetails)
+$(deriveJSON defaultOptions ''Location)
 
 cityLookup :: FilePath -> FilePath -> IO CityLookup
 cityLookup locF blockF = do
   -- yolo on partial
-  (Just locFieldLines) <- (readCSVFile locF)
-  (Just blockFieldLines) <- (readCSVFile blockF)
+  locFieldLines <- readCSVFile locF
+  blockFieldLines <- readCSVFile blockF
   let m = M.fromList $ mapMaybe parseCityFields locFieldLines
   return $! mapMaybe (parseBlockFields m) blockFieldLines
 

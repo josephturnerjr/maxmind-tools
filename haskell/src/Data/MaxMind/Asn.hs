@@ -20,8 +20,8 @@ type ASN = IPv4RangeSegment ASNDetails
 
 data ASNDetails = ASNDetails
   {
-    netOwner :: !NetOwner,
-    netAsn :: !NetASN
+    netOwner :: {-# UNPACK #-} !NetOwner,
+    netAsn :: {-# UNPACK #-} !NetASN
   } deriving (Show)
 
 type NetOwner = T.Text
@@ -29,8 +29,7 @@ type NetASN = T.Text
 
 asnLookup :: FilePath -> IO ASNLookup
 asnLookup f = do
-  -- yolo on partial
-  (Just fieldLines) <- (readCSVFile f)
+  fieldLines <- (readCSVFile f)
   return $! mapMaybe parseASNFields fieldLines
 
 parseASNFields :: [String] -> Maybe ASN

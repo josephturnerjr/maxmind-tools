@@ -24,8 +24,8 @@ instance Show IPv4 where
 instance Ord IPv4 where
   compare (IPv4 a) (IPv4 b) = compare a b
 
-data IPv4Range = IPv4Range !IPv4 !IPv4 deriving (Show)
-data IPv4RangeSegment a = IPv4RangeSegment !IPv4Range !a deriving (Show)
+data IPv4Range = IPv4Range {-# UNPACK #-} !IPv4 {-# UNPACK #-} !IPv4 deriving (Show)
+data IPv4RangeSegment a = IPv4RangeSegment {-# UNPACK #-} !IPv4Range !a deriving (Show)
 
 data SegmentOrdering = LowerThan | Within | HigherThan
 
