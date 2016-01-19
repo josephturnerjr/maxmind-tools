@@ -35,8 +35,8 @@ maxMindIPSearch = do
   putStrLn "Done with asnL"
   getLine
   cityL <- cityLookup ".data/GeoCity/GeoLite2-City-Locations-en.csv" ".data/GeoCity/GeoLite2-City-Blocks-IPv4.csv"
-  let asnL = []
-  forceSpine asnL `seq` forceSpine cityL `seq` return $ MaxMindIPSearch $ \ip ->
+  forceSpine asnL `seq` forceSpine cityL `seq` putStrLn (show cityL)
+  return $ MaxMindIPSearch $ \ip ->
     IPDetails {location = (fmap loc (findIP cityL ip)), asn = (findIP asnL ip)} where
       loc (IPv4RangeSegment _ a) = a 
 

@@ -1,40 +1,40 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Data.Csv
-  (parseCSV, readCSVFile)
+  (readCSVFile)
   where
 
-import Text.ParserCombinators.Parsec
+import Text.Parsec
+import Text.Parsec.ByteString.Lazy
+import qualified Data.ByteString.Lazy.Char8 as B
 import System.IO
 import Data.Maybe
 
 data HandleHeader = DiscardHeader | KeepHeader
 
-parseCSV :: String -> [[String]]
-parseCSV = (mapMaybe parseCSVLine) . lines
-
-parseCSVLine :: String -> Maybe [String]
+parseCSVLine :: B.ByteString -> Maybe [B.ByteString]
 parseCSVLine s = case parse parseLine "CSV Parser" s of
-                     (Right b) -> Just $! b
+                     (Right b) -> Just b
                      (Left err) -> Nothing
 
+parseLine :: Parser [B.ByteString]
 parseLine = chainl field comma [] <* eof
 
 comma = char ',' >> (return $ (++))
 
-field = (:[]) <$> ((try quotedField) <|> unquotedField)
+field = ((:[]) . B.pack) <$> ((try quotedField) <|> unquotedField)
 unquotedField = many (noneOf ",\n")
 quotedField = char '"' *> (many (try escapedQuote <|> noneOf "\"")) <* char '"'
 
 escapedQuote = char '"' *> char '"'
 
-readCSVFile :: FilePath -> IO [[String]]
+readCSVFile :: FilePath -> IO [[B.ByteString]]
 readCSVFile path = do
   h <- openFile path ReadMode 
   hSetEncoding h latin1
-  lines <- hGetContents h
+  contents <- B.hGetContents h
+  let lines = B.split '\n' contents
   return $! parseCSVFile DiscardHeader lines
 
-parseCSVFile :: HandleHeader -> String -> [[String]]
-parseCSVFile DiscardHeader ls = fieldLines where
-  (headers:fieldLines) = parseCSV ls
-parseCSVFile KeepHeader ls = parseCSV ls
+parseCSVFile :: HandleHeader -> [B.ByteString] -> [[B.ByteString]]
+parseCSVFile DiscardHeader (l:ls) = mapMaybe parseCSVLine ls
+parseCSVFile KeepHeader ls = mapMaybe parseCSVLine ls

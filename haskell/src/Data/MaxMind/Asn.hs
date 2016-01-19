@@ -7,14 +7,19 @@ import Data.IP (IPv4RangeSegment(..), IPv4Range(..), IPv4(..))
 import Data.Word
 import Data.Aeson
 import Data.Aeson.TH
-import Data.TextCsv (readCSVFile)
+import Data.Csv (readCSVFile)
 import Data.Maybe
 import Text.Read
 import Data.Char
 import Text.Parsec
-import Text.Parsec.Text
+import Text.Parsec.ByteString.Lazy
 import Control.Applicative ((<*>), (<*), (*>), (<$>))
+import qualified Data.ByteString.Lazy.Char8 as B
+import qualified Data.ByteString.Short as BS (ShortByteString, toShort, unpack)
+import qualified Data.Aeson.Types as AT
 import qualified Data.Text as T
+
+import Debug.Trace
 
 type ASNLookup = [ASN]
 type ASN = IPv4RangeSegment ASNDetails
@@ -25,38 +30,42 @@ data ASNDetails = ASNDetails
     netAsn :: {-# UNPACK #-} !NetASN
   } deriving (Show)
 
-type NetOwner = T.Text
-type NetASN = T.Text
+type NetOwner = BS.ShortByteString
+type NetASN = BS.ShortByteString
+
+instance ToJSON BS.ShortByteString where
+  toJSON = AT.String . T.pack . (map (chr . fromEnum)) . BS.unpack
+
+$(deriveToJSON defaultOptions ''ASNDetails)
 
 asnLookup :: FilePath -> IO ASNLookup
 asnLookup f = do
   fieldLines <- readCSVFile f
   return $! mapMaybe parseASNFields fieldLines
 
-parseASNFields :: [T.Text] -> Maybe ASN
+parseASNFields :: [B.ByteString] -> Maybe ASN
 parseASNFields [startF, endF, asnF] = do
-  start <- readMaybe (T.unpack startF) :: Maybe Word32
-  end <- readMaybe (T.unpack endF) :: Maybe Word32
+  start <- readMaybe (B.unpack startF) :: Maybe Word32
+  end <- readMaybe (B.unpack endF) :: Maybe Word32
   asn <- parseASNField asnF
   return $! IPv4RangeSegment (IPv4Range (IPv4 start) (IPv4 end)) asn
+parseASNFields fs = trace ("Error with this: " ++ (show fs)) Nothing
 
-parseASNField :: T.Text -> Maybe ASNDetails
+parseASNField :: B.ByteString -> Maybe ASNDetails
 parseASNField s = case parse parseASNField' "ASN Parser" s of
                      (Right b) -> Just $! b
                      (Left err) -> Nothing
 
 parseASNField' = makeDetails <$> optionMaybe asn <*> (try spaces *> optionMaybe owner) <* eof
   where makeDetails asn owner = ASNDetails (fillEmpty asn) (fillEmpty owner)
-        fillEmpty :: Maybe T.Text -> T.Text
-        fillEmpty = fromMaybe ""
+        fillEmpty :: Maybe B.ByteString -> BS.ShortByteString
+        fillEmpty =  BS.toShort . B.toStrict . fromMaybe "" 
 
-asn :: Parser T.Text
+asn :: Parser B.ByteString
 asn = do 
   string "AS"
   digits <- many digit
-  return $ T.pack ("AS" ++ digits)
+  return $ B.pack ("AS" ++ digits)
 
-owner :: Parser T.Text
-owner = T.pack <$> manyTill anyChar eof
-
-$(deriveJSON defaultOptions{omitNothingFields = True, fieldLabelModifier = (map toLower) . (drop 3)} ''ASNDetails)
+owner :: Parser B.ByteString
+owner = B.pack <$> manyTill anyChar eof
