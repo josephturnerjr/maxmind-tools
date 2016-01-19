@@ -15,7 +15,13 @@ cabal-version:       >=1.10
 
 library
   hs-source-dirs:      src
-  exposed-modules:     Lib, Data.IP, Data.Csv, Data.MaxMind, Data.MaxMind.Asn, Data.MaxMind.City
+  exposed-modules:     Lib
+                     , Data.IP
+                     , Data.Csv
+                     , Data.TextCsv
+                     , Data.MaxMind
+                     , Data.MaxMind.Asn
+                     , Data.MaxMind.City
   build-depends:       base >= 4.7 && < 5
                      , aeson
                      , servant-server

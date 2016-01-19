@@ -5,7 +5,8 @@ module Data.IP
     IPv4(..), IPv4Range(..), IPv4RangeSegment(..), parseIPv4, parseCIDR, findIP
   ) where
 
-import Text.ParserCombinators.Parsec
+import Text.Parsec
+import Text.Parsec.Text
 import Control.Applicative ((<*>), (<*), (*>), (<$>))
 import Text.Read
 import Text.Show
@@ -14,8 +15,10 @@ import Data.Bits
 import Data.Aeson
 import Data.Aeson.TH
 import Data.List (intercalate)
+import qualified Data.Text as T
 
-data IPv4 = IPv4 {-# UNPACK #-} !Word32 deriving (Eq)
+--data IPv4 = IPv4 {-# UNPACK #-} !Word32 deriving (Eq)
+newtype IPv4 = IPv4 Word32 deriving (Eq)
 
 instance Show IPv4 where
   show (IPv4 ip) = intercalate "." (map (show . (mask ip)) [24, 16, 8, 0]) where
@@ -48,6 +51,7 @@ findIP (iprs@(IPv4RangeSegment range a):iprsss) ip = handleCmp (cmpRange range i
 findIP [] _ = Nothing
 
 ipv4 :: String -> String -> String -> String -> Maybe IPv4
+{-# INLINE ipv4 #-}
 ipv4 o1 o2 o3 o4 = do
   o1' <- readMaybe o1 :: Maybe Word32
   o2' <- readMaybe o2 :: Maybe Word32
@@ -56,20 +60,23 @@ ipv4 o1 o2 o3 o4 = do
   return $! IPv4 $ (o1' `shift` 24) + (o2' `shift` 16) + (o3' `shift` 8) + o4'
 
 cidr :: String -> String -> String -> String -> String -> Maybe IPv4Range
+{-# INLINE cidr #-}
 cidr o1 o2 o3 o4 netmask = do
-  (IPv4 ip) <- ipv4 o1 o2 o3 o4
-  netmask' <- readMaybe netmask :: Maybe Int
-  let mask = (0xffffffff `shift` (32 - netmask')) :: Word32
-  let bottom = ip .&. mask
-  let top = bottom + (complement mask)
+  (IPv4 ip) <- {-# SCC "cidrip" #-}ipv4 o1 o2 o3 o4
+  netmask' <- {-# SCC "cidrnetm" #-}readMaybe netmask :: Maybe Int
+  let mask = {-# SCC "cidrmask" #-}(0xffffffff `shift` (32 - netmask')) :: Word32
+  let bottom = {-# SCC "cidrbot" #-}ip .&. mask
+  let top = {-# SCC "cidrtop" #-}bottom + (complement mask)
   return $! IPv4Range (IPv4 bottom) (IPv4 top)
   
-parseIPv4:: String -> Maybe IPv4
+parseIPv4:: T.Text -> Maybe IPv4
+{-# INLINE parseIPv4 #-}
 parseIPv4 s = case parse parseIPv4' "IP Parser" s of
                      (Right b) -> b
                      (Left err) -> Nothing
 
-parseCIDR:: String -> Maybe IPv4Range
+parseCIDR:: T.Text -> Maybe IPv4Range
+{-# INLINE parseCIDR #-}
 parseCIDR s = case parse parseCIDR' "IP Parser" s of
                      (Right b) -> b
                      (Left err) -> Nothing

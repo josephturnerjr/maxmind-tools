@@ -18,7 +18,7 @@ import Data.MaxMind
 import Control.Monad.Reader (ReaderT, runReaderT, asks)
 
 instance FromText IPv4 where
-  fromText = parseIPv4 . T.unpack
+  fromText = parseIPv4
 
 type AppM = ReaderT Config (EitherT ServantErr IO)
 

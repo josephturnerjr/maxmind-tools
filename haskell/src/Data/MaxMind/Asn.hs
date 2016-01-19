@@ -7,11 +7,12 @@ import Data.IP (IPv4RangeSegment(..), IPv4Range(..), IPv4(..))
 import Data.Word
 import Data.Aeson
 import Data.Aeson.TH
-import Data.Csv (readCSVFile)
+import Data.TextCsv (readCSVFile)
 import Data.Maybe
 import Text.Read
 import Data.Char
-import Text.ParserCombinators.Parsec
+import Text.Parsec
+import Text.Parsec.Text
 import Control.Applicative ((<*>), (<*), (*>), (<$>))
 import qualified Data.Text as T
 
@@ -29,27 +30,33 @@ type NetASN = T.Text
 
 asnLookup :: FilePath -> IO ASNLookup
 asnLookup f = do
-  fieldLines <- (readCSVFile f)
+  fieldLines <- readCSVFile f
   return $! mapMaybe parseASNFields fieldLines
 
-parseASNFields :: [String] -> Maybe ASN
+parseASNFields :: [T.Text] -> Maybe ASN
 parseASNFields [startF, endF, asnF] = do
-  start <- readMaybe startF :: Maybe Word32
-  end <- readMaybe endF :: Maybe Word32
+  start <- readMaybe (T.unpack startF) :: Maybe Word32
+  end <- readMaybe (T.unpack endF) :: Maybe Word32
   asn <- parseASNField asnF
   return $! IPv4RangeSegment (IPv4Range (IPv4 start) (IPv4 end)) asn
 
-parseASNField :: String -> Maybe ASNDetails
+parseASNField :: T.Text -> Maybe ASNDetails
 parseASNField s = case parse parseASNField' "ASN Parser" s of
                      (Right b) -> Just $! b
                      (Left err) -> Nothing
 
 parseASNField' = makeDetails <$> optionMaybe asn <*> (try spaces *> optionMaybe owner) <* eof
   where makeDetails asn owner = ASNDetails (fillEmpty asn) (fillEmpty owner)
-        fillEmpty = maybe "" T.pack
+        fillEmpty :: Maybe T.Text -> T.Text
+        fillEmpty = fromMaybe ""
 
-asn = (++) <$> string "AS" <*> many digit
+asn :: Parser T.Text
+asn = do 
+  string "AS"
+  digits <- many digit
+  return $ T.pack ("AS" ++ digits)
 
-owner = manyTill anyChar eof
+owner :: Parser T.Text
+owner = T.pack <$> manyTill anyChar eof
 
 $(deriveJSON defaultOptions{omitNothingFields = True, fieldLabelModifier = (map toLower) . (drop 3)} ''ASNDetails)
