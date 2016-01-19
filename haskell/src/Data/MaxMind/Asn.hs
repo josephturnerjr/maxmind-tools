@@ -18,10 +18,11 @@ import qualified Data.ByteString.Lazy.Char8 as B
 import qualified Data.ByteString.Short as BS (ShortByteString, toShort, unpack)
 import qualified Data.Aeson.Types as AT
 import qualified Data.Text as T
+import Data.IPLookup
 
 import Debug.Trace
 
-type ASNLookup = [ASN]
+type ASNLookup = IPLookup ASNDetails
 type ASN = IPv4RangeSegment ASNDetails
 
 data ASNDetails = ASNDetails
@@ -41,7 +42,8 @@ $(deriveToJSON defaultOptions ''ASNDetails)
 asnLookup :: FilePath -> IO ASNLookup
 asnLookup f = do
   fieldLines <- readCSVFile f
-  return $! mapMaybe parseASNFields fieldLines
+  let els = mapMaybe parseASNFields fieldLines
+  return $! fromList els
 
 parseASNFields :: [B.ByteString] -> Maybe ASN
 parseASNFields [startF, endF, asnF] = do

@@ -16,15 +16,16 @@ import qualified Data.ByteString.Short as BS (ShortByteString, toShort, fromShor
 import qualified Data.Text as T
 import Debug.Trace
 import Data.Char
+import Data.IPLookup
 
 type GeoID = Int
 
-type CityLookup = [LocationRange]
+type CityLookup = IPLookup Location
 type LocationRange = IPv4RangeSegment Location
 
 data Location = Location
   {
-    details :: {-# UNPACK #-} !LocationDetails,
+    details :: !LocationDetails,
     latitude :: {-# UNPACK #-} !Latitude,
     longitude :: {-# UNPACK #-} !Longitude
   } deriving (Show)
@@ -69,7 +70,7 @@ cityLookup locF blockF = do
   let blockFields = mapMaybe (parseBlockFields m) blockFieldLines
   putStrLn "done doing blocks"
   getLine
-  return $! blockFields
+  return $! fromList blockFields
 
 tReadMaybe :: Read a => B.ByteString -> Maybe a
 tReadMaybe = readMaybe . B.unpack

@@ -8,7 +8,8 @@ import Data.Word
 import qualified Data.Map as M
 import Data.Char
 import Data.Maybe
-import Data.IP (IPv4, IPv4RangeSegment(..), findIP)
+import Data.IP (IPv4, IPv4RangeSegment(..))
+import Data.IPLookup
 import Data.MaxMind.City (Location, cityLookup)
 import Data.MaxMind.Asn (ASN, asnLookup)
 import Data.Aeson
@@ -35,10 +36,8 @@ maxMindIPSearch = do
   putStrLn "Done with asnL"
   getLine
   cityL <- cityLookup ".data/GeoCity/GeoLite2-City-Locations-en.csv" ".data/GeoCity/GeoLite2-City-Blocks-IPv4.csv"
-  forceSpine asnL `seq` forceSpine cityL `seq` putStrLn (show cityL)
+  putStrLn "Done with cityL"
+  getLine
   return $ MaxMindIPSearch $ \ip ->
     IPDetails {location = (fmap loc (findIP cityL ip)), asn = (findIP asnL ip)} where
       loc (IPv4RangeSegment _ a) = a 
-
-forceSpine :: [a] -> ()
-forceSpine = foldr (const id) ()

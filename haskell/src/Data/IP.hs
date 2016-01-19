@@ -2,7 +2,7 @@
 {-# LANGUAGE TemplateHaskell #-}
 module Data.IP
   (
-    IPv4(..), IPv4Range(..), IPv4RangeSegment(..), parseIPv4, parseCIDR, findIP
+    IPv4(..), IPv4Range(..), IPv4RangeSegment(..), parseIPv4, parseCIDR, cmpRange, SegmentOrdering(..)
   ) where
 
 import Text.Parsec
@@ -31,7 +31,7 @@ instance Ord IPv4 where
 data IPv4Range = IPv4Range {-# UNPACK #-} !IPv4 {-# UNPACK #-} !IPv4 deriving (Show)
 data IPv4RangeSegment a = IPv4RangeSegment {-# UNPACK #-} !IPv4Range !a deriving (Show)
 
-data SegmentOrdering = LowerThan | Within | HigherThan
+data SegmentOrdering = LowerThan | Within | HigherThan deriving (Show, Eq)
 
 $(deriveJSON defaultOptions ''IPv4)
 $(deriveJSON defaultOptions ''IPv4Range)
@@ -44,12 +44,6 @@ cmpRange (IPv4Range start end) ip
   | ip < start = HigherThan
   | ip > end = LowerThan
   | ip >= start && ip <= end = Within
-
-findIP :: [IPv4RangeSegment a] -> IPv4 -> Maybe (IPv4RangeSegment a)
-findIP (iprs@(IPv4RangeSegment range a):iprsss) ip = handleCmp (cmpRange range ip) where
-  handleCmp Within = Just iprs
-  handleCmp _ = findIP iprsss ip
-findIP [] _ = Nothing
 
 ipv4 :: String -> String -> String -> String -> Maybe IPv4
 ipv4 o1 o2 o3 o4 = do
