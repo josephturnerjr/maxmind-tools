@@ -5,8 +5,8 @@ module Data.IP
     IPv4(..), IPv4Range(..), IPv4RangeSegment(..), parseIPv4, parseCIDR, cmpRange, SegmentOrdering(..)
   ) where
 
-import Text.Parsec
-import Text.Parsec.ByteString.Lazy
+import Data.Attoparsec.ByteString -- Text.Parsec
+import Data.Attoparsec.ByteString.Lazy as L --Text.Parsec.ByteString.Lazy
 import Control.Applicative ((<*>), (<*), (*>), (<$>))
 import Text.Read
 import Text.Show
@@ -47,78 +47,39 @@ cmpRange (IPv4Range start end) ip
 
 ipv4 :: String -> String -> String -> String -> Maybe IPv4
 ipv4 o1 o2 o3 o4 = do
-  o1' <- readMaybe o1 :: Maybe Word32
-  o2' <- readMaybe o2 :: Maybe Word32
-  o3' <- readMaybe o3 :: Maybe Word32
-  o4' <- readMaybe o4 :: Maybe Word32
-  return $! IPv4 $ (o1' `shift` 24) + (o2' `shift` 16) + (o3' `shift` 8) + o4'
+  o1' <- parseOctet o1 :: Maybe Word32
+  o2' <- parseOctet o2 :: Maybe Word32
+  o3' <- parseOctet o3 :: Maybe Word32
+  o4' <- parseOctet o4 :: Maybe Word32
+  return $! IPv4 $ (o1' `shift` 24) + (o2' `shift` 16) + (o3' `shift` 8) + o4' where
+    parseOctet o = readMaybe o >>= validOctet
+    validOctet o | o >= 0 && o <= 255 = Just o
+                 | otherwise = Nothing
 
-cidr :: String -> String -> String -> String -> String -> Maybe IPv4Range
-cidr o1 o2 o3 o4 netmask = do
-  (IPv4 ip) <- {-# SCC "cidrip" #-}ipv4 o1 o2 o3 o4
-  netmask' <- {-# SCC "cidrnetm" #-}readMaybe netmask :: Maybe Int
-  let mask = {-# SCC "cidrmask" #-}(0xffffffff `shift` (32 - netmask')) :: Word32
-  let bottom = {-# SCC "cidrbot" #-}ip .&. mask
-  let top = {-# SCC "cidrtop" #-}bottom + (complement mask)
-  return $! IPv4Range (IPv4 bottom) (IPv4 top)
+cidr :: Maybe IPv4 -> String -> Maybe IPv4Range
+cidr mip netmask = do
+  (IPv4 ip) <- mip
+  netmask' <- parseNetmask netmask :: Maybe Int
+  let mask = (0xffffffff `shift` (32 - netmask')) :: Word32
+  let bottom = ip .&. mask
+  let top = bottom + (complement mask)
+  return $! IPv4Range (IPv4 bottom) (IPv4 top) where
+    parseNetmask n = readMaybe n >>= validNetmask
+    validNetmask n | n >= 0 && n <= 32 = Just n
+                   | otherwise = Nothing
   
 parseIPv4:: T.Text -> Maybe IPv4
-parseIPv4 s = case parse parseIPv4' "IP Parser" (B.pack . T.unpack $ s) of
+parseIPv4 s = case L.parse (parseIPv4' <* eof) "IP Parser" (B.pack . T.unpack $ s) of
                      (Right b) -> b
                      (Left err) -> Nothing
 
 parseCIDR:: B.ByteString -> Maybe IPv4Range
-parseCIDR s = case parse parseCIDR' "IP Parser" s of
+parseCIDR s = case L.parse parseCIDR' "IP Parser" s of
                      (Right b) -> b
                      (Left err) -> Nothing
 
-parseIPv4' = ipv4 <$> (octet <* char '.') <*> (octet <* char '.') <*> (octet <* char '.') <*> octet <* eof
-parseCIDR' = cidr <$> (octet <* char '.') <*> (octet <* char '.') <*> (octet <* char '.') <*> (octet <* char '/') <*> netmask <* eof
+parseIPv4' = ipv4 <$> (octet <* char '.') <*> (octet <* char '.') <*> (octet <* char '.') <*> octet
+parseCIDR' = cidr <$> (parseIPv4' <* char '/') <*> netmask <* eof
 
-octet = (try twoOctet)
-    <|> (try oneOctet)
-    <|> (try zeroPadOne)
-    <|> (try zeroPadTwo)
-    <|> (try twoDigit)
-    <|> (try oneDigit) where
-  twoDigit = do
-    first <- digit
-    second <- digit
-    return $! [first, second]
-  oneDigit = do
-    dig <- digit
-    return $! [dig]
-  twoOctet = do
-    char '2'
-    second <- oneOf ['0'..'5']
-    third <- digit
-    return $! ['2', second, third]
-  oneOctet = do
-    char '1'
-    second <- digit
-    third <- digit
-    return $! ['1', second, third]
-  zeroPadTwo = do
-    char '0'
-    d1 <- digit
-    d2 <- digit
-    return $! [d1, d2]
-  zeroPadOne = do
-    char '0'
-    char '0'
-    d <- digit
-    return $! [d]
-
-netmask = (try thirty) <|> (try twenty) <|> (try ten) <|> fmap (:[]) digit where
-  thirty = do
-    char '3'
-    d <- oneOf ['0'..'2']
-    return $! ['3', d]
-  twenty = do
-    char '2'
-    d <- digit
-    return $! ['2', d]
-  ten = do
-    char '1'
-    d <- digit
-    return $! ['2', d]
+octet = many digit
+netmask = many digit

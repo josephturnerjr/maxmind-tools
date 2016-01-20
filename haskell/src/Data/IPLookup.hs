@@ -4,15 +4,25 @@ module Data.IPLookup
 
 import Data.IP
 import qualified Data.Vector as V
+import qualified Data.Vector.Unboxed as VU
+import Data.List
 
-type IPLookup a = V.Vector (IPv4, IPv4, a)
+data IPLookup a = IPLookup {
+  values :: V.Vector a,
+  starts :: V.Vector IPv4,
+  ends :: V.Vector IPv4
+} deriving (Show)
 
 fromList :: [IPv4RangeSegment a] -> IPLookup a
-fromList = V.fromList . (map toTuple) where
-  toTuple (IPv4RangeSegment (IPv4Range start end) a) = (start, end, a)
+fromList is = IPLookup {values = rFL vals, starts = rFL starts, ends = rFL ends} where
+  (starts, ends, vals) = foldl' append ([], [], []) is
+  append (ss, es, vs) (IPv4RangeSegment (IPv4Range start end) a) = (start:ss, end:es, a:vs)
+  rFL = V.reverse . V.fromList
 
 findIP :: IPLookup a -> IPv4 -> Maybe (IPv4RangeSegment a)
 findIP ipl ip = do
-  (start, end, a) <- V.find (checkRange ip) ipl 
-  return $ IPv4RangeSegment (IPv4Range start end) a where
-    checkRange ip (start, end, a) = ip >= start && ip <= end
+  idx <- (V.findIndex (\(s, e) -> s <= ip && e >= ip) (V.zip (starts ipl) (ends ipl)))
+  let range = IPv4Range ((starts ipl) V.! idx) ((ends ipl) V.! idx)
+      value = (values ipl) V.! idx
+  return $ IPv4RangeSegment range value  where
+    

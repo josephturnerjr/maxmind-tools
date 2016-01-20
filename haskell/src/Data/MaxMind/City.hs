@@ -17,6 +17,7 @@ import qualified Data.Text as T
 import Debug.Trace
 import Data.Char
 import Data.IPLookup
+import Data.List
 
 type GeoID = Int
 
