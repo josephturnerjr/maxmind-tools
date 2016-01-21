@@ -32,13 +32,10 @@ instance ToJSON IPDetails where
 
 maxMindIPSearch :: IO MaxMindIPSearch
 maxMindIPSearch = do
-  asnL <- asnLookup ".data/GeoASN.csv"
+  asnL <- {-# SCC "asnlookup" #-}asnLookup ".data/GeoASN.csv"
   putStrLn "Done with asnL"
-  getLine
-  cityL <- cityLookup ".data/GeoCity/GeoLite2-City-Locations-en.csv" ".data/GeoCity/GeoLite2-City-Blocks-IPv4.csv"
+  cityL <- {-# SCC "citylookup" #-}cityLookup ".data/GeoCity/GeoLite2-City-Locations-en.csv" ".data/GeoCity/GeoLite2-City-Blocks-IPv4.csv"
   putStrLn "Done with cityL"
-  getLine
-  putStrLn $ show cityL
   return $ MaxMindIPSearch $ \ip ->
     IPDetails {location = (fmap loc (findIP cityL ip)), asn = (findIP asnL ip)} where
       loc (IPv4RangeSegment _ a) = a 

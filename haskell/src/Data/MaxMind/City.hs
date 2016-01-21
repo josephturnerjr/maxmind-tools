@@ -19,7 +19,7 @@ import Data.Char
 import Data.IPLookup
 import Data.List
 
-type GeoID = Int
+type GeoID = B.ByteString
 
 type CityLookup = IPLookup Location
 type LocationRange = IPv4RangeSegment Location
@@ -61,37 +61,35 @@ cityLookup locF blockF = do
   -- yolo on partial
   locFieldLines <- readCSVFile locF
   putStrLn "done reading locations"
-  getLine
-  let m = M.fromList $ mapMaybe parseCityFields locFieldLines
+  let m =  M.fromList $ mapMaybe parseCityFields locFieldLines
   putStrLn "done parsing locations"
-  getLine
   blockFieldLines <- readCSVFile blockF
   putStrLn "done reading blocks"
-  getLine
   let blockFields = mapMaybe (parseBlockFields m) blockFieldLines
   putStrLn "done doing blocks"
-  getLine
   return $! fromList blockFields
-
-tReadMaybe :: Read a => B.ByteString -> Maybe a
-tReadMaybe = readMaybe . B.unpack
 
 parseCityFields:: [B.ByteString] -> Maybe (GeoID, LocationDetails)
 parseCityFields (geoname_id:locale_code:continent_code:continent_name:country_iso_code:
                  country_name:s1_iso_code:s1_name:
                  s2_iso_code:s2_name:city_name:metro_code:time_zone:[]) = {-# SCC "parselocations" #-} do
-  geoID <- tReadMaybe geoname_id :: Maybe Int
-  return $! (geoID, LocationDetails {continent=p2m continent_code continent_name, country=p2m country_iso_code country_name, r1=p2m s1_iso_code s1_name, r2=p2m s2_iso_code s2_name, city=(f city_name)})
+  return $! (geoname_id, LocationDetails {continent=p2m continent_code continent_name, country=p2m country_iso_code country_name, r1=p2m s1_iso_code s1_name, r2=p2m s2_iso_code s2_name, city=(f city_name)})
   where p2m code name = CodedName (f code) (f name)
         f = BS.toShort . B.toStrict
 parseCityFields fs = trace ("Error in city fields: " ++ (show fs)) Nothing
+{-# INLINE parseCityFields #-}
 
 parseBlockFields :: M.Map GeoID LocationDetails -> [B.ByteString] -> Maybe LocationRange
 parseBlockFields detailLookup (network:geoname_id:_:_:_:_:_:latitude:longitude:[]) = {-# SCC "parseblocks" #-} do
-  range <- {-# SCC "parsecidr" #-} parseCIDR network
-  geoID <- {-# SCC "parsegeo" #-}tReadMaybe geoname_id :: Maybe Int
-  lat <- {-# SCC "parselat" #-}tReadMaybe latitude :: Maybe Double
-  lon <- {-# SCC "parselon" #-}tReadMaybe longitude :: Maybe Double
-  details <- {-# SCC "lookupdeets" #-}M.lookup geoID detailLookup
+  range <- parseCIDR network
+  lat <- tReadMaybe latitude :: Maybe Double
+  lon <- tReadMaybe longitude :: Maybe Double
+  details <- M.lookup geoname_id detailLookup
   return $! IPv4RangeSegment range $ Location {latitude=lat, longitude=lon, details=details}
 parseBlockFields _ fs = trace ("Error in block fields: " ++ (show fs)) Nothing
+{-# INLINE parseBlockFields #-}
+
+tReadMaybe :: Read a => B.ByteString -> Maybe a
+tReadMaybe = {-# SCC "treadmaybe" #-}readMaybe . B.unpack
+{-# INLINE tReadMaybe #-}
+

@@ -46,7 +46,7 @@ asnLookup f = do
   return $! fromList els
 
 parseASNFields :: [B.ByteString] -> Maybe ASN
-parseASNFields [startF, endF, asnF] = do
+parseASNFields [startF, endF, asnF] = {-# SCC "parseasnfields" #-} do
   start <- readMaybe (B.unpack startF) :: Maybe Word32
   end <- readMaybe (B.unpack endF) :: Maybe Word32
   asn <- parseASNField asnF
