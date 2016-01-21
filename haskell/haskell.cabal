@@ -30,6 +30,7 @@ library
                      , warp
                      , either
                      , parsec
+                     , random
                      , attoparsec
                      , text
                      , containers

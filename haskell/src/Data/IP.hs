@@ -2,7 +2,7 @@
 {-# LANGUAGE TemplateHaskell #-}
 module Data.IP
   (
-    IPv4(..), IPv4Range(..), IPv4RangeSegment(..), parseIPv4, parseCIDR
+    IPv4(..), IPv4Range(..), IPv4RangeSegment(..), parseIPv4, parseCIDR, randomIPv4
   ) where
 
 import Text.Read
@@ -15,6 +15,7 @@ import Data.List (intercalate)
 import Control.Monad
 import qualified Data.ByteString.Lazy.Char8 as B
 import qualified Data.Text as T
+import System.Random
 
 --data IPv4 = IPv4 {-# UNPACK #-} !Word32 deriving (Eq)
 newtype IPv4 = IPv4 Word32 deriving (Eq)
@@ -77,3 +78,6 @@ parseCIDR = cidr . (B.splitWith delim) where
 
 parseIPv4' = ipv4 . (B.split '.')
 {-# INLINE parseIPv4' #-}
+
+randomIPv4 :: IO IPv4
+randomIPv4 = randomIO >>= (return . IPv4)

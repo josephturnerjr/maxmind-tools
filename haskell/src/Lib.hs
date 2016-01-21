@@ -16,6 +16,8 @@ import Data.IP
 import qualified Data.Text as T
 import Data.MaxMind
 import Control.Monad.Reader (ReaderT, runReaderT, asks)
+import System.CPUTime
+import Control.Monad
 
 instance FromText IPv4 where
   fromText = parseIPv4
@@ -28,9 +30,16 @@ data Config = Config {
   search :: !MaxMindIPSearch
 }
 
+randomIPs = replicateM 1000000 randomIPv4
+
 startApp :: IO ()
 startApp = do
   ipSearch <- maxMindIPSearch
+  start <- getCPUTime
+  ips <- randomIPs
+  putStrLn . show . last $ map (lookupIP ipSearch) ips
+  end   <- getCPUTime
+  putStrLn $ "Total time was " ++ (show $ end - start)
   let config = Config {search = ipSearch}
   run 8080 $ app config
 
