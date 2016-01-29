@@ -5,4 +5,4 @@
 (defn read-csv-file
   [filename f]
   (with-open [rdr (io/reader filename)]
-    (doall (map f (rest (parse-csv (slurp filename)))))))
+    (vec (map f (rest (parse-csv (slurp filename)))))))
