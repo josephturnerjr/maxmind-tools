@@ -6,7 +6,8 @@
 
 (defn lookup-ip
   [key-vals ip]
-  (rest (first (filter (partial ip-in ip) key-vals))))
+  (let [[_ payload] (first (filter (partial ip-in ip) key-vals))]
+    payload))
 
 (defn create-lookup
   [key-vals]
