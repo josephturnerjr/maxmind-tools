@@ -1,0 +1,1 @@
+web: java $JVM_OPTS -cp target/clojure_iptools.jar clojure.main -m clojure-iptools.core
