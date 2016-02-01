@@ -18,11 +18,11 @@ def lookup_ipv4(ipv4_addr, lookups):
 
 
 def timeit(lookups):
-    iters = 100000
+    iters = 1000000
     errors = 0
+    ips = [".".join([str(randint(0,255)) for _ in range(4)]) for _ in xrange(iters)]
     a = time.time()
-    for _ in xrange(iters):
-        addr = ".".join([str(randint(0,255)) for _ in range(4)])
+    for addr in ips:
         ret = lookup_ipv4(addr, lookups)
     elapsed = time.time() - a
     print "%s iterations: %s seconds (%s iterations / sec) with %s errors" % (iters, elapsed, iters / elapsed, errors)
@@ -76,4 +76,5 @@ if __name__ == "__main__":
     lookups = [city_lookup, asn_lookup]
     #test_some(lookup)
     timeit(lookups)
-    input(lookups)
+    timeit(lookups)
+    #input(lookups)

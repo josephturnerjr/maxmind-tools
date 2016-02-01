@@ -1,5 +1,6 @@
 (ns clojure-iptools.handler
   (:require [compojure.core :refer [defroutes routes wrap-routes]]
+            [clojure-iptools.maxmind.core :refer [timeit]]
             [clojure-iptools.layout :refer [error-page]]
             [clojure-iptools.routes.services :refer [service-routes]]
             [clojure-iptools.middleware :as middleware]
@@ -19,6 +20,8 @@
   (log-adapter/init env)
   (doseq [component (:started (mount/start))]
     (log/info component "started"))
+  (timeit)
+  (timeit)
   ((:init defaults)))
 
 (defn destroy

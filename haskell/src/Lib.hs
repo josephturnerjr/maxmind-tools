@@ -30,16 +30,22 @@ data Config = Config {
   search :: !MaxMindIPSearch
 }
 
-randomIPs = replicateM 1000000 randomIPv4
+randomIters = 1000000
+randomIPs = replicateM randomIters randomIPv4
+
+timeit ipSearch = do
+  start <- getCPUTime
+  ips <- randomIPs
+  putStrLn . show . last $ map (lookupIP ipSearch) ips
+  end <- getCPUTime
+  let seconds = (fromInteger $ end - start) / 1000000000000
+  putStrLn $ (show randomIters) ++ " iterations: " ++ (show seconds) ++ " seconds (" ++ (show $ (fromIntegral randomIters) / seconds) ++ " iterations per second)"
 
 startApp :: IO ()
 startApp = do
   ipSearch <- maxMindIPSearch
-  start <- getCPUTime
-  ips <- randomIPs
-  putStrLn . show . last $ map (lookupIP ipSearch) ips
-  end   <- getCPUTime
-  putStrLn $ "Total time was " ++ (show $ end - start)
+  timeit ipSearch
+  timeit ipSearch
   let config = Config {search = ipSearch}
   run 8080 $ app config
 
